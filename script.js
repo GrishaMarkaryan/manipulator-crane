@@ -1,128 +1,88 @@
 'use strict';
 
-/* ============================================================
-   CONTACT FORM — simple client-side handler
-   Replace the body of handleSubmit() with your backend call,
-   Formspree, Netlify Forms, Telegram Bot, etc.
-   ============================================================ */
+/* ── CONTACT FORM ─────────────────────────────────────────────
+   Replace handleSubmit() body with your backend / Formspree /
+   Netlify Forms / Telegram Bot call.
+   ────────────────────────────────────────────────────────────── */
 (function () {
-  const form    = document.getElementById('contact-form');
-  const success = document.getElementById('form-success');
-
+  var form    = document.getElementById('contact-form');
+  var success = document.getElementById('form-success');
   if (!form) return;
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
 
-    const nameInput  = form.querySelector('#name');
-    const phoneInput = form.querySelector('#phone');
-    let valid = true;
+    var nameEl  = form.querySelector('#name');
+    var phoneEl = form.querySelector('#phone');
+    var ok = true;
 
-    // Basic validation
-    [nameInput, phoneInput].forEach(function (input) {
-      input.classList.remove('error');
-      if (!input.value.trim()) {
-        input.classList.add('error');
-        valid = false;
-      }
+    [nameEl, phoneEl].forEach(function (el) {
+      el.classList.remove('error');
+      if (!el.value.trim()) { el.classList.add('error'); ok = false; }
     });
 
-    if (!valid) return;
+    if (!ok) return;
 
-    handleSubmit({
-      name:  nameInput.value.trim(),
-      phone: phoneInput.value.trim(),
-    });
+    handleSubmit({ name: nameEl.value.trim(), phone: phoneEl.value.trim() });
   });
 
   function handleSubmit(data) {
     /*
-      ── OPTION A: Formspree ──────────────────────────────────
-      Replace action attribute on <form> with your Formspree URL:
-        <form id="contact-form" action="https://formspree.io/f/XXXXXXX" method="POST">
-      And remove this JS handler — Formspree handles redirect.
-
-      ── OPTION B: Netlify Forms ─────────────────────────────
-      Add netlify attribute to <form> and Netlify handles it.
-
-      ── OPTION C: Telegram Bot ──────────────────────────────
-      fetch('https://api.telegram.org/botTOKEN/sendMessage', {
+      ── Telegram Bot example ──────────────────────────────────
+      fetch('https://api.telegram.org/bot<TOKEN>/sendMessage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id: 'YOUR_CHAT_ID',
-          text: `Новая заявка!\nИмя: ${data.name}\nТелефон: ${data.phone}`
+          chat_id: '<CHAT_ID>',
+          text: 'Новая заявка!\nИмя: ' + data.name + '\nТел: ' + data.phone
         })
       });
 
-      ── CURRENT: just shows success message ─────────────────
+      ── Formspree ─────────────────────────────────────────────
+      Add action="https://formspree.io/f/XXXXXXX" to <form>
+      and method="POST" — remove this JS handler entirely.
     */
 
-    console.log('Форма отправлена:', data);
-
-    form.hidden = true;
+    console.log('Заявка:', data);
+    form.hidden    = true;
     success.hidden = false;
   }
 })();
 
 
-/* ============================================================
-   STICKY CTA — hide while hero CTA buttons are visible,
-   show once user scrolls past them.
-   ============================================================ */
+/* ── PHONE INPUT MASK ─────────────────────────────────────────
+   Formats input as +7 (XXX) XXX-XX-XX
+   ────────────────────────────────────────────────────────────── */
 (function () {
-  const stickyCta = document.getElementById('sticky-cta');
-  if (!stickyCta) return;
+  var input = document.getElementById('phone');
+  if (!input) return;
 
-  // On mobile the sticky bar is always shown (CSS handles desktop).
-  // Optionally hide it while the hero section is in view.
-  const heroCta = document.querySelector('.hero-cta');
-  if (!heroCta || !window.IntersectionObserver) return;
+  input.addEventListener('input', function () {
+    var d = this.value.replace(/\D/g, '');
+    if (d[0] === '8') d = '7' + d.slice(1);
+    if (d.length && d[0] !== '7') d = '7' + d;
 
-  const observer = new IntersectionObserver(
-    function (entries) {
-      entries.forEach(function (entry) {
-        // Hide sticky bar when hero CTA is visible on screen
-        stickyCta.style.transform = entry.isIntersecting
-          ? 'translateY(100%)'
-          : 'translateY(0)';
-      });
-    },
-    { threshold: 0.5 }
-  );
-
-  // Apply CSS transition for smooth show/hide
-  stickyCta.style.transition = 'transform 0.3s ease';
-  observer.observe(heroCta);
+    var out = '';
+    if (d.length > 0) out  = '+' + d[0];
+    if (d.length > 1) out += ' (' + d.slice(1, 4);
+    if (d.length >= 4) out += ') ' + d.slice(4, 7);
+    if (d.length >= 7) out += '-' + d.slice(7, 9);
+    if (d.length >= 9) out += '-' + d.slice(9, 11);
+    this.value = out;
+  });
 })();
 
 
-/* ============================================================
-   PHONE MASK — auto-formats Russian phone numbers in the form
-   ============================================================ */
+/* ── STICKY BAR — hide while hero CTA is visible ─────────────
+   ────────────────────────────────────────────────────────────── */
 (function () {
-  const phoneInput = document.getElementById('phone');
-  if (!phoneInput) return;
+  var bar = document.getElementById('sticky-bar');
+  var cta = document.querySelector('.hero .cta-group');
+  if (!bar || !cta || !window.IntersectionObserver) return;
 
-  phoneInput.addEventListener('input', function () {
-    let digits = this.value.replace(/\D/g, '');
+  bar.style.transition = 'transform .25s ease';
 
-    // Normalise leading 8 → 7
-    if (digits.startsWith('8')) {
-      digits = '7' + digits.slice(1);
-    }
-    if (!digits.startsWith('7') && digits.length > 0) {
-      digits = '7' + digits;
-    }
-
-    // Format: +7 (XXX) XXX-XX-XX
-    let formatted = '';
-    if (digits.length > 0) formatted = '+' + digits[0];
-    if (digits.length > 1) formatted += ' (' + digits.slice(1, 4);
-    if (digits.length >= 4) formatted += ') ' + digits.slice(4, 7);
-    if (digits.length >= 7) formatted += '-' + digits.slice(7, 9);
-    if (digits.length >= 9) formatted += '-' + digits.slice(9, 11);
-
-    this.value = formatted;
-  });
+  new IntersectionObserver(function (entries) {
+    bar.style.transform = entries[0].isIntersecting ? 'translateY(100%)' : 'translateY(0)';
+  }, { threshold: 0.5 }).observe(cta);
 })();
